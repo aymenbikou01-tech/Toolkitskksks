@@ -329,6 +329,7 @@ OPTIONS = {
     "3": ("wifi password Generator",      "71sta.py"),
     "4": ("Bob ControleX2",               "c2.py"),
     "5": ("I Forget My Info Crack",       "Info_Secret.py"),
+    "6": ("Capter Cookies from Bots",     "Cookies.py")
 }
 
 
